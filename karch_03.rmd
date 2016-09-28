@@ -1,0 +1,172 @@
+---
+title: 'Homework #3'
+author: "Jessica Karch"
+date: "September 23, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r = setup}
+library(ggplot2)
+library(dplyr)
+library(readr)
+library(animation)
+library(RColorBrewer)
+library(ggthemes)
+```
+**1) Complete problems 10 and 17-18 on pg. 109-111. Use R where possible. Data sets (so you don't have to type things in) are available at http://www.zoology.ubc.ca/~whitlock/ABD/teaching/datasets.html. **
+```{r = 1}
+# Problem 10
+# load data set
+reggenes <- read.csv("2016_homework_03_ggplot2-master/data/04q11NumberGenesRegulated.csv")
+```
+**10a)** Using an approximate method, provide a rough 95% confidence interval for the population mean.
+```{r = 10a}
+# expand values by frequency
+reggenes2 <- rep(reggenes$ngenes, reggenes$frequency)
+# calculate sd
+sd <- sd(reggenes2)
+# calculate se using formula
+se <- sd / sqrt(109)
+# calculate 95% CI
+se * 1.96
+mean <- mean(reggenes2)
+mean + 1.42
+mean - 1.42
+```
+The mean (8.31) has a 95% confidence interval from 6.9 to 9.7 genes.  
+
+**10b)** Provide an interpretation of the interval you calculated in part (a).  
+We are 95% confident that the calculated mean of the population (8.31) lies within +/- 1.42 of the mean of the real population. If we take some number of random samples, 95% of these samples will have the true value of the mean within the 95% confidence interval.
+
+**17)** No, this is not a correct interpretation of a confidence interval.A 95% confidence interval does not mean there is a 95% chance that the true value lies within that interval, it means that we are 95% confident that the true mean of the population lies in the interval we calculated. If we take 100 random samples, 95 of these will have will have the true population mean within the range of their 95% confidence interval.
+
+**18a)** What is the mean and standard deviation of beetles per flower?
+```{r = 18}
+flower <- c(51, 45, 61, 76, 11, 117, 7, 132, 52, 149)
+mean_flower <- mean(flower)
+mean_flower
+sd(flower)
+```
+The mean is 70.1 beetles with a standard deviation of 48.5 beetles.  
+
+**18b)** What is the standard error of this estimate of the mean?
+```{r = 18b}
+se_flower <- sd(flower) / sqrt(10)
+se_flower
+```
+15.34.  
+
+**18c)** Give an approximate 95% confidence interval of the mean. Provide lower and upper limits.
+```{r = 18c}
+ci_flower <- se_flower * 1.96
+mean_flower + ci_flower
+mean_flower - ci_flower
+```
+The 95% confidence interval of the mean is 40.04 to 100.16 beetles.  
+
+**18d)** If you had been given 25 data points instead of 10, would you expect the mean to be greater, less than, or about the same as the mean of this sample?  
+Assuming a normal distribution, I'd expect the mean to be about the same. 
+
+**18e)** If you had been given 25 data points instead of 10, would you expect the standard deviation to be greater, less than, or about the same as the standard deviation of this sample?   
+I'd expect the standard deviation to be less than that of this sample. Standard deviation is inversely proportional to sqrt(n-1), where n is the size of the sample. Therefore a larger sample size should yield a smaller standard deviation.  
+**18f)**
+If you had been given 25 data points instead of 10, would you expect the standard error to be greater, less than, or about the same as the standard error of this sample?  
+I'd expect it to be smaller. Standard error is the standard deviation divided by the square root of the sample size. Because the numerator will be smaller (see 18e) and the denominator will be larger, se will be smaller than that of this sample.
+
+**2) The other day, [Dave Curran](https://twitter.com/iamreddave) using some of the code from our lab made a wonderful animation of change in arctic sea ice.**
+
+**2.1)** Load the data using readr and make the Month_Names column into a factor whose levels are in order of month.
+```{r = 2}
+# Save rmarkdown file in homework master folder downloaded from github
+# Set working directory to source file location
+# Load data
+seaice <- read.csv("2016_homework_03_ggplot2-master/data/NH_seaice_extent_monthly_1978_2016.csv")
+# Factorize Month_Names column
+seaice_month <- seaice %>%
+  mutate(Months_Name = factor(Month_Name, levels = month.abb))
+sort(seaice_month$Months_Name)
+levels(seaice_month$Months_Name)
+```
+
+**2.2** Make a boxplot showing the variability in sea ice extent every month.
+```{r = 2.2}
+boxplot(Extent ~ Months_Name, data = seaice_month)
+```
+
+**2.3)** Use dplyr to get the annual minimum sea ice. Plot minimum ice by year, and add a trendline (either a smooth spline or a straight line).
+```{r = 2.3}
+# get annual minimum sea ice, use filter
+seaice_min <- seaice_month %>%
+    group_by(Year) %>%
+    filter(Extent==min(Extent)) %>%
+  ungroup()
+seaice_min_plot <- ggplot(data = seaice_min, 
+                      mapping = aes(x = Year, y = Extent))
+seaice_min_plot +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  labs(title = "Change in the Annual Minimum Arctic Sea Ice Levels from 1979 to 2016", x = "Year", 
+       y = "Extent in 10^6 sq km") 
+```
+
+**2.4)** Plot sea ice by year, with different lines for different months. Then, add a new column (`mutate`!) using the ggplot2 function `cut_interval(Month, n=4)` - this will create four even bins. Seasons, if you will. Use `facet_wrap` on the same plot and split the plot into seasons.
+```{r = 2.4}
+seaice_plot <-ggplot(data = seaice_month,
+                     mapping = aes(x = Year, y = Extent, group = Months_Name,
+                                   color = Months_Name))
+seaice_plot +
+  geom_line() 
+
+seaice_season <- seaice_month %>%
+  mutate(Season = cut_interval(Month, n = 4))
+seaice_season_plot <- ggplot(data = seaice_season,
+                             mapping = aes(x = Year, y = Extent,
+                                           group = Months_Name,
+                                           color = Months_Name))
+seaice_season_plot +
+  geom_line() + facet_wrap(~Season)
+```
+
+**2.5)** Last, make a line plot of sea ice by month. Gussy it up with colors by year, a different theme, and whatever other annotations, changes to axes, etc., you think best show the story of this data.
+```{r = 2.5}
+seaice_month_plot <-ggplot(data = seaice_month,
+                           mapping = aes(x = Months_Name, y = Extent,
+                                         group = Year,
+                                         color = Year))
+seaice_month_plot +
+  geom_line() +
+  scale_color_gradientn(colors = brewer.pal(9, "PuBu")) +
+  labs(title = "Change in Arctic Sea Ice Levels over Time", x = "Month", 
+                 y = "Extent in 10^6 sq km") +
+  theme_few() +
+  ylim(c(2, 17)) +
+  annotate(x=9, y=2.5, geom="text", 
+           label = "Chart by Jessica Karch | Data source: nsidc.org", size = 3)
+
+
+```
+
+**2.6 Extra Credit)** Make it animated.
+```{r = 2.6}
+saveGIF({
+  for(i in 1979:2016){
+    
+    print(ggplot(seaice_month %>% filter(Year <= i),
+                 mapping = aes(x = Months_Name, y = Extent,
+                               group = Year,
+                               color = Year)) +
+            geom_line() +
+            scale_color_gradientn(colors = brewer.pal(9, "PuBu")) +
+            labs(title = "Change in Arctic Sea Ice Levels over Time", x = "Month", 
+                 y = "Extent in 10^6 sq km") +
+            theme_few() +
+            ylim(c(2, 17)) +
+            annotate(x=9, y=2.5, geom="text", label = "Chart by Jessica Karch | Data source: nsidc.org", size = 3)
+    )}
+}, interval=0.3,ani.width = 600, ani.height = 600)
+```
+
